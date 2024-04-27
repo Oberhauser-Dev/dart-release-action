@@ -16,13 +16,16 @@ steps:
   with:
     token: ${{ github.token }}
     dry-run: true
+    main-path: 'bin/my_dart_app.dart'
     app-name: 'my_dart_app'
     app-version: ${{ github.ref_name }} # or set manually: 'v1.2.3-alpha.4'
     tag: ${{ github.ref }}
-    build-type: 'debian'
     build-args: |-
-      --dart-define=API_URL="https://example.com"
-      --dart-define=API_KEY=12345678
+      --define=DB_USER="user"
+      --define=DB_PASSWORD=12345678
+    include-paths: |-
+      test
+      README.md
 ```
 
 ### Publish
@@ -36,35 +39,25 @@ steps:
 - uses: oberhauser-dev/dart-release-action@v0
   with:
     dry-run: true
+    main-path: 'bin/my_dart_app.dart'
     app-name: 'my_dart_app'
     app-version: ${{ github.ref_name }} # or set manually: 'v1.2.3-alpha.4'
     tag: ${{ github.ref }}
     token: ${{ github.token }}
     build-args: |-
-      --dart-define=API_URL="https://example.com"
-      --dart-define=APP_ENV=prod
-    publish-stage: internal
-    publish-distributor: 'android-google-play'
-    # Android
-    publish-android-fastlane-secrets-json-base64: ${{ secrets.ANDROID_GOOGLE_PLAY_JSON }}
-    android-keystore-file-base64: ${{ secrets.ANDROID_KEYSTORE }}
-    android-keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-    android-key-alias: ${{ secrets.ANDROID_KEY_ALIAS }}
-    android-key-password: ${{ secrets.ANDROID_KEY_PASSWORD }}
-    # iOS
-    ios-apple-username: ${{ secrets.IOS_APPLE_USERNAME }}
-    ios-api-key-id: ${{ secrets.IOS_API_KEY_ID }}
-    ios-api-issuer-id: ${{ secrets.IOS_API_ISSUER_ID }}
-    ios-api-private-key-base64: ${{ secrets.IOS_API_PRIVATE_KEY }}
-    ios-content-provider-id: ${{ secrets.IOS_CONTENT_PROVIDER_ID }}
-    ios-team-id: ${{ secrets.IOS_TEAM_ID }}
-    ios-distribution-private-key-base64: ${{ secrets.IOS_DISTRIBUTION_PRIVATE_KEY }}
-    ios-distribution-cert-base64: ${{ secrets.IOS_DISTRIBUTION_CERT }}
-    ios-team-enterprise: ${{ secrets.IOS_TEAM_ENTERPRISE }} # Optional
-    # Web
-    publish-web-host: ${{ secrets.WEB_HOST }}
-    publish-web-path: ${{ secrets.WEB_PATH }}
-    publish-web-ssh-port: ${{ secrets.WEB_SSH_PORT }}
-    publish-web-ssh-user: ${{ secrets.WEB_SSH_USER }}
-    publish-web-ssh-private-key-base64: ${{ secrets.WEB_SSH_PRIVATE_KEY }}
+      --define=API_URL="https://example.com"
+      --define=APP_ENV=prod
+    include-paths: |-
+      test
+      README.md
+    # Deploy
+    deploy-web-host: ${{ secrets.WEB_HOST }}
+    deploy-web-path: ${{ secrets.WEB_PATH }}
+    deploy-web-ssh-port: ${{ secrets.WEB_SSH_PORT }}
+    deploy-web-ssh-user: ${{ secrets.WEB_SSH_USER }}
+    deploy-web-ssh-private-key-base64: ${{ secrets.WEB_SSH_PRIVATE_KEY }}
+    deploy-pre-run: |
+      systemctl --user stop my-dart-app.service 
+    deploy-post-run: |
+      systemctl --user start my-dart-app.service
 ```

@@ -17,6 +17,9 @@ inputs:
     description: 'Whether the process should only run dry'
     required: false
     default: 'true'
+  main-path:
+    description: 'The Dart entry point with a `main` method'
+    required: true
   app-name:
     description: 'The name of the app executable'
     required: true
@@ -29,7 +32,11 @@ inputs:
     required: false
     default: ${{ github.ref }}
   build-args:
-    description: 'Add options such as "--dart-define" to the dart build command'
+    description: 'Add options such as "--define" to the dart build command'
+    required: false
+    default: ''
+  include-paths:
+    description: 'Determine which resources should be bundled for deployment. The executable is automatically included.'
     required: false
     default: ''
   # Deploy
@@ -53,6 +60,14 @@ inputs:
     description: 'The private ssh key (as base64 string) of this GitHub action server'
     required: false
     default: ''
+  deploy-pre-run:
+    description: 'Run command on the Web server before uploading the application.'
+    required: false
+    default: ''
+  deploy-post-run:
+    description: 'Run command on the Web server after uploading the application.'
+    required: false
+    default: ''
 
 
 outputs:
@@ -71,30 +86,39 @@ runs:
       shell: bash
     - name: Prepare
       id: prepare
-      # Remove leading and trailing newline, if existent, add a newline at the beginning
+      # Remove leading and trailing newline, if existent.
+      # Add a newline at the beginning, if string is not empty.
       # Replace newline with ` --build-arg=`
       run: |
         dart pub global activate dart_release '<1.0.0'
+
+        ln=$'\n'
         buildArgs='${{ inputs.build-args }}'
         buildArgs=${buildArgs#$'\n'}
         buildArgs=${buildArgs%$'\n'}
-        ln=$'\n'
-        buildArgs="$ln$buildArgs"
+        if [ ! -z "${buildArgs}" ]; then buildArgs="$ln$buildArgs"; fi
         buildArgs="${buildArgs//$'\n'/' --build-arg='}"
         echo "build-args=$(echo $buildArgs)" >> $GITHUB_OUTPUT
+
+        includePaths='${{ inputs.include-paths }}'
+        includePaths=${includePaths#$'\n'}
+        includePaths=${includePaths%$'\n'}
+        if [ ! -z "${includePaths}" ]; then includePaths="$ln$includePaths"; fi
+        includePaths="${includePaths//$'\n'/' --include-path='}"
+        echo "include-paths=$(echo $includePaths)" >> $GITHUB_OUTPUT
       shell: bash
       working-directory: ${{ inputs.working-directory }}
 
     - name: Build App
-      if: ${{ inputs.publish-distributor == '' }} # Only upload to GitHub if in publishing mode.
+      if: inputs.deploy-web-host == ''
       id: build
       run: |
         ARTIFACT_PATH=$(dart pub global run dart_release build \
-          ${{ inputs.build-type }} \
+          --main-path ${{ inputs.main-path }} \
           --app-name ${{ inputs.app-name }} \
           --app-version=${{ inputs.app-version }} \
           ${{ steps.prepare.outputs.build-args }} \
-          ${{ ((inputs.build-type == 'apk' || inputs.build-type == 'aab') && inputs.android-keystore-file-base64 != '' && inputs.android-keystore-password != '' && inputs.android-key-alias != '') && format('--keystore-file-base64={0} --keystore-password={1} --key-alias={2} --key-password={3}', inputs.android-keystore-file-base64, inputs.android-keystore-password, inputs.android-key-alias, inputs.android-key-password) || '' }} \
+          ${{ steps.prepare.outputs.include-paths }} \
           | tail -1)
         ARTIFACT_NAME=$(basename "$ARTIFACT_PATH")
         echo "artifact-path=$(echo $ARTIFACT_PATH)" >> $GITHUB_OUTPUT
@@ -102,23 +126,40 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}
     - name: Upload binaries to release
-      if: ${{ inputs.dry-run == 'false' }}
+      # Only upload to GitHub if in build mode.
+      if: inputs.dry-run == 'false' && inputs.deploy-web-host == ''
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ inputs.token }}
         file: ${{ inputs.working-directory }}${{ (!endsWith(inputs.working-directory, '/') && '/') || '' }}${{ steps.build.outputs.artifact-path }}
         asset_name: ${{ steps.build.outputs.artifact-name }}
         tag: ${{ inputs.tag }}
+    - run: echo "${{ inputs.dry-run == 'false' && 'Release' || 'Dry run' }} for ${{ runner.os }} was successful!"
+      shell: bash
+      if: inputs.deploy-web-host == ''
 
     - name: Deploy
-      if: ${{ inputs.publish-distributor != '' }}
+      if: inputs.deploy-web-host != ''
       run: |
+        cat > pre-run.sh <<EOL
+        ${{ inputs.deploy-pre-run }}
+        EOL
+        cat > post-run.sh <<EOL
+          ${{ inputs.deploy-post-run }}
+        EOL
         dart pub global run dart_release deploy \
-          ${{ inputs.publish-stage != '' && format('--stage={0}', inputs.publish-stage) || '' }} \
+          --main-path ${{ inputs.main-path }} \
+          ${{ inputs.deploy-pre-run != '' && '--pre-script pre-run.sh' || '' }} \
+          ${{ inputs.deploy-post-run != '' && '--post-script post-run.sh' || '' }} \
           --app-name ${{ inputs.app-name }} \
           --app-version=${{ inputs.app-version }} \
           ${{ steps.prepare.outputs.build-args }} \
-          ${{ inputs.publish-distributor == 'web-server' && format('--host={0} --path={1} --ssh-port={2} --ssh-user={3} --ssh-private-key-base64={4}', inputs.publish-web-host, inputs.publish-web-path, inputs.publish-web-ssh-port, inputs.publish-web-ssh-user, inputs.publish-web-ssh-private-key-base64) || '' }} \
+          ${{ steps.prepare.outputs.include-paths }} \
+          --host=${{ inputs.deploy-web-host }} \
+          --path=${{ inputs.deploy-web-path }} \
+          --ssh-port=${{ inputs.deploy-web-ssh-port }} \
+          --ssh-user=${{ inputs.deploy-web-ssh-user }} \
+          --ssh-private-key-base64=${{ inputs.deploy-web-ssh-private-key-base64 }} \
           ${{ inputs.dry-run != 'false' && '--dry-run' || '' }}
       shell: bash
       working-directory: ${{ inputs.working-directory }}

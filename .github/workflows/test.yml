@@ -30,15 +30,19 @@ jobs:
         with:
           token: ${{ github.token }}
           dry-run: true
+          main-path: 'bin/example.dart'
           app-name: 'example'
           app-version: 'v0.0.1-alpha.1'
           tag: 'v0.0.1-alpha.1'
           build-args: |-
-            --dart-define=API_URL="https://example.com"
-            --dart-define=API_KEY=12345678
+            --define=DB_USER="user"
+            --define=DB_PASSWORD=12345678
+          include-paths: |-
+            test
+            README.md
           working-directory: ./example
       - name: Check file
         working-directory: ./example
         run: |
-          [ -f "build/releases/example-v0.0.1-alpha.1.tar.gz-linux-amd64" ] && exit 0 || exit 1
+          [ -f "build/releases/example-v0.0.1-alpha.1-linux-amd64.tar.gz" ] && exit 0 || exit 1
 
