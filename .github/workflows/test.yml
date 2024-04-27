@@ -1,0 +1,44 @@
+name: test
+on:
+  workflow_dispatch:
+    inputs:
+      dart_sdk:
+        description: 'Dart Version'
+        required: false
+        default: 'stable'
+        type: string
+  workflow_call:
+    inputs:
+      dart_sdk:
+        required: false
+        default: 'stable'
+        type: string
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ inputs.dart_sdk }}
+      - name: Create Example app
+        run: dart create -t console example
+      - name: Build Linux app with dart-release-action
+        uses: ./
+        with:
+          token: ${{ github.token }}
+          dry-run: true
+          app-name: 'example'
+          app-version: 'v0.0.1-alpha.1'
+          tag: 'v0.0.1-alpha.1'
+          build-args: |-
+            --dart-define=API_URL="https://example.com"
+            --dart-define=API_KEY=12345678
+          working-directory: ./example
+      - name: Check file
+        working-directory: ./example
+        run: |
+          [ -f "build/releases/example-v0.0.1-alpha.1.tar.gz-linux-amd64" ] && exit 0 || exit 1
+

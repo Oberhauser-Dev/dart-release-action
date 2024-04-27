@@ -1,0 +1,125 @@
+name: 'Dart Release Action'
+description: 'Build, release, publish and deploy Dart apps (macOS, Linux, Windows).'
+author: 'August Oberhauser'
+branding:
+  icon: 'smartphone'
+  color: 'purple'
+inputs:
+  token:
+    description: "Authorized secret GitHub Personal Access Token. Defaults to github.token"
+    required: false
+    default: ${{ github.token }}
+  working-directory:
+    description: 'Specifies the working directory where the command is run.'
+    required: false
+    default: './'
+  dry-run:
+    description: 'Whether the process should only run dry'
+    required: false
+    default: 'true'
+  app-name:
+    description: 'The name of the app executable'
+    required: true
+  app-version:
+    description: 'Semantic version of the release, see https://semver.org/'
+    required: false
+    default: ${{ github.ref_name }}
+  tag:
+    description: 'The tag of the release. Could be the same as the version. Only needed for build to upload assets.'
+    required: false
+    default: ${{ github.ref }}
+  build-args:
+    description: 'Add options such as "--dart-define" to the dart build command'
+    required: false
+    default: ''
+  # Deploy
+  deploy-web-host:
+    description: 'The hoster of the web app, e.g. the domain or ip address'
+    required: false
+    default: ''
+  deploy-web-path:
+    description: 'The Web servers path to your application space of the app'
+    required: false
+    default: ''
+  deploy-web-ssh-port:
+    description: 'The Web server SSH port'
+    required: false
+    default: ''
+  deploy-web-ssh-user:
+    description: 'The Web server SSH user'
+    required: false
+    default: ''
+  deploy-web-ssh-private-key-base64:
+    description: 'The private ssh key (as base64 string) of this GitHub action server'
+    required: false
+    default: ''
+
+
+outputs:
+  artifact-name:
+    description: "The name of the app build artifact"
+    value: ${{ steps.release.outputs.artifact-name }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install current bash on macOS
+      if: runner.os == 'macOS'
+      run: |
+        brew install bash
+        bash --version
+      shell: bash
+    - name: Prepare
+      id: prepare
+      # Remove leading and trailing newline, if existent, add a newline at the beginning
+      # Replace newline with ` --build-arg=`
+      #  dart pub global activate dart_release '<1.0.0'
+      run: |
+        dart pub global activate --source git https://github.com/Oberhauser-Dev/dart_packages.git --git-ref dev --git-path packages/dart_release
+        buildArgs='${{ inputs.build-args }}'
+        buildArgs=${buildArgs#$'\n'}
+        buildArgs=${buildArgs%$'\n'}
+        ln=$'\n'
+        buildArgs="$ln$buildArgs"
+        buildArgs="${buildArgs//$'\n'/' --build-arg='}"
+        echo "build-args=$(echo $buildArgs)" >> $GITHUB_OUTPUT
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+
+    - name: Build App
+      if: ${{ inputs.publish-distributor == '' }} # Only upload to GitHub if in publishing mode.
+      id: build
+      run: |
+        ARTIFACT_PATH=$(dart pub global run dart_release build \
+          ${{ inputs.build-type }} \
+          --app-name ${{ inputs.app-name }} \
+          --app-version=${{ inputs.app-version }} \
+          ${{ steps.prepare.outputs.build-args }} \
+          ${{ ((inputs.build-type == 'apk' || inputs.build-type == 'aab') && inputs.android-keystore-file-base64 != '' && inputs.android-keystore-password != '' && inputs.android-key-alias != '') && format('--keystore-file-base64={0} --keystore-password={1} --key-alias={2} --key-password={3}', inputs.android-keystore-file-base64, inputs.android-keystore-password, inputs.android-key-alias, inputs.android-key-password) || '' }} \
+          | tail -1)
+        ARTIFACT_NAME=$(basename "$ARTIFACT_PATH")
+        echo "artifact-path=$(echo $ARTIFACT_PATH)" >> $GITHUB_OUTPUT
+        echo "artifact-name=$(echo $ARTIFACT_NAME)" >> $GITHUB_OUTPUT
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+    - name: Upload binaries to release
+      if: ${{ inputs.dry-run == 'false' }}
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ inputs.token }}
+        file: ${{ inputs.working-directory }}${{ (!endsWith(inputs.working-directory, '/') && '/') || '' }}${{ steps.build.outputs.artifact-path }}
+        asset_name: ${{ steps.build.outputs.artifact-name }}
+        tag: ${{ inputs.tag }}
+
+    - name: Deploy
+      if: ${{ inputs.publish-distributor != '' }}
+      run: |
+        dart pub global run dart_release deploy \
+          ${{ inputs.publish-stage != '' && format('--stage={0}', inputs.publish-stage) || '' }} \
+          --app-name ${{ inputs.app-name }} \
+          --app-version=${{ inputs.app-version }} \
+          ${{ steps.prepare.outputs.build-args }} \
+          ${{ inputs.publish-distributor == 'web-server' && format('--host={0} --path={1} --ssh-port={2} --ssh-user={3} --ssh-private-key-base64={4}', inputs.publish-web-host, inputs.publish-web-path, inputs.publish-web-ssh-port, inputs.publish-web-ssh-user, inputs.publish-web-ssh-private-key-base64) || '' }} \
+          ${{ inputs.dry-run != 'false' && '--dry-run' || '' }}
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
