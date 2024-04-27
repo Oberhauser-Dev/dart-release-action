@@ -73,9 +73,8 @@ runs:
       id: prepare
       # Remove leading and trailing newline, if existent, add a newline at the beginning
       # Replace newline with ` --build-arg=`
-      #  dart pub global activate dart_release '<1.0.0'
       run: |
-        dart pub global activate --source git https://github.com/Oberhauser-Dev/dart_packages.git --git-ref dev --git-path packages/dart_release
+        dart pub global activate dart_release '<1.0.0'
         buildArgs='${{ inputs.build-args }}'
         buildArgs=${buildArgs#$'\n'}
         buildArgs=${buildArgs%$'\n'}
