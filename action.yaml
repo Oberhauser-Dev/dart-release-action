@@ -143,12 +143,14 @@ runs:
       if: inputs.deploy-web-host != ''
       run: |
         cat > pre-run.sh <<EOL
+        #!/usr/bin/env bash
         ${{ inputs.deploy-pre-run }}
         EOL
         chmod +x pre-run.sh
 
         cat > post-run.sh <<EOL
-          ${{ inputs.deploy-post-run }}
+        #!/usr/bin/env bash
+        ${{ inputs.deploy-post-run }}
         EOL
         chmod +x post-run.sh
 
