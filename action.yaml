@@ -145,9 +145,13 @@ runs:
         cat > pre-run.sh <<EOL
         ${{ inputs.deploy-pre-run }}
         EOL
+        chmod +x pre-run.sh
+
         cat > post-run.sh <<EOL
           ${{ inputs.deploy-post-run }}
         EOL
+        chmod +x post-run.sh
+
         dart pub global run dart_release deploy \
           ${{ inputs.dry-run != 'false' && '--dry-run' || '' }} \
           ${{ inputs.deploy-pre-run != '' && '--pre-script pre-run.sh' || '' }} \
