@@ -1,7 +1,6 @@
 # dart-release-action
 
 A GitHub action of [dart_release](https://github.com/Oberhauser-Dev/dart_packages/tree/main/packages/dart_release) to build and deploy Dart apps for macOS, Linux and Windows.
-The action itself runs on Linux, Windows, and macOS.
 For a full example you can check out the workflow of [wrestling_scoreboard](https://github.com/Oberhauser-Dev/wrestling_scoreboard/blob/main/.github/workflows/release-server.yml).
 
 ## Usage
@@ -24,11 +23,12 @@ steps:
       --define=DB_USER="user"
       --define=DB_PASSWORD=12345678
     include-paths: |-
-      test
+      public
       README.md
+      pubspec.yaml
 ```
 
-### Publish
+### Deploy
 
 Store your `Repository secrets` here: `https://github.com/<username>/<repository>/settings/secrets/actions`.
 
@@ -48,8 +48,9 @@ steps:
       --define=API_URL="https://example.com"
       --define=APP_ENV=prod
     include-paths: |-
-      test
+      public
       README.md
+      pubspec.yaml
     # Deploy
     deploy-web-host: ${{ secrets.WEB_HOST }}
     deploy-web-path: ${{ secrets.WEB_PATH }}
