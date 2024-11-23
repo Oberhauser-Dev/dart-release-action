@@ -21,12 +21,20 @@ inputs:
     description: 'The Dart entry point with a `main` method'
     required: true
   app-name:
-    description: 'The name of the app executable'
+    description: 'The name of the app executable Uses the `name` of pubspec.yaml by default.'
     required: true
   app-version:
-    description: 'Semantic version of the release, see https://semver.org/'
+    description: 'Semantic version of the release, see https://semver.org/. Uses the `version` of pubspec.yaml by default.'
     required: false
-    default: ${{ github.ref_name }}
+    default: ''
+  build-metadata:
+    description: 'Override build metadata (build number, appends +), see https://semver.org/.'
+    required: false
+    default: ''
+  build-pre-release:
+    description: 'Override build pre-release (appends -), see https://semver.org/.'
+    required: false
+    default: ''
   tag:
     description: 'The tag of the release. Could be the same as the version. Only needed for build to upload assets.'
     required: false
@@ -116,7 +124,9 @@ runs:
         ARTIFACT_PATH=$(dart pub global run dart_release build \
           --main-path ${{ inputs.main-path }} \
           --app-name ${{ inputs.app-name }} \
-          --app-version=${{ inputs.app-version }} \
+          ${{ inputs.app-version != '' && format('--app-version={0}', inputs.app-version) || '' }} \
+          ${{ inputs.build-metadata != '' && format('--build-metadata={0}', inputs.build-metadata) || '' }} \
+          ${{ inputs.build-pre-release != '' && format('--build-pre-release={0}', inputs.build-pre-release) || '' }} \
           ${{ steps.prepare.outputs.build-args }} \
           ${{ steps.prepare.outputs.include-paths }} \
           | tail -1)
@@ -159,7 +169,9 @@ runs:
           ${{ inputs.deploy-pre-run != '' && '--pre-script pre-run.sh' || '' }} \
           ${{ inputs.deploy-post-run != '' && '--post-script post-run.sh' || '' }} \
           --app-name ${{ inputs.app-name }} \
-          --app-version=${{ inputs.app-version }} \
+          ${{ inputs.app-version != '' && format('--app-version={0}', inputs.app-version) || '' }} \
+          ${{ inputs.build-metadata != '' && format('--build-metadata={0}', inputs.build-metadata) || '' }} \
+          ${{ inputs.build-pre-release != '' && format('--build-pre-release={0}', inputs.build-pre-release) || '' }} \
           ${{ steps.prepare.outputs.build-args }} \
           ${{ steps.prepare.outputs.include-paths }} \
           --host=${{ inputs.deploy-web-host }} \

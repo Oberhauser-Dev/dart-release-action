@@ -25,13 +25,13 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux
-            output: "build/releases/example-v0.0.1-alpha.1-linux-amd64.tar.gz"
+            output: "build/releases/example-v1.0.0-alpha.1+123-linux-amd64.tar.gz"
           - os: windows-latest
             platform: windows
-            output: "build/releases/example-v0.0.1-alpha.1-windows-amd64.tar.gz"
+            output: "build/releases/example-v1.0.0-alpha.1+123-windows-amd64.tar.gz"
           - os: macos-latest
             platform: macos
-            output: "build/releases/example-v0.0.1-alpha.1-macos-arm64.tar.gz"
+            output: "build/releases/example-v1.0.0-alpha.1+123-macos-arm64.tar.gz"
     steps:
       - uses: actions/checkout@v4
       - uses: dart-lang/setup-dart@v1
@@ -46,8 +46,9 @@ jobs:
           dry-run: true
           main-path: 'bin/example.dart'
           app-name: 'example'
-          app-version: 'v0.0.1-alpha.1'
-          tag: 'v0.0.1-alpha.1'
+          build-metadata: '123'
+          build-pre-release: 'alpha.1'
+          tag: 'v1.0.0-alpha.1'
           build-args: |-
             --define=DB_USER="user"
             --define=DB_PASSWORD=12345678

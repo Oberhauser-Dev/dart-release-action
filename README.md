@@ -40,8 +40,8 @@ steps:
   with:
     dry-run: true
     main-path: 'bin/my_dart_app.dart'
-    app-name: 'my_dart_app'
-    app-version: ${{ github.ref_name }} # or set manually: 'v1.2.3-alpha.4'
+    app-name: 'my_dart_app' # Optional, takes the name from pubspec.yaml by default
+    app-version: ${{ github.ref_name }} # or set manually: 'v1.2.3-alpha.4', optional, takes the version from pubspec.yaml by default
     tag: ${{ github.ref }}
     token: ${{ github.token }}
     build-args: |-
