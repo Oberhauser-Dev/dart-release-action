@@ -29,6 +29,12 @@ jobs:
           - os: windows-latest
             platform: windows
             output: "build/releases/example-v1.0.0-alpha.1+123-windows-amd64.tar.gz"
+          - os: ubuntu-24.04-arm
+            platform: linux
+            output: "build/releases/example-v1.0.0-alpha.1+123-linux-arm64.tar.gz"
+          - os: windows-11-arm
+            platform: windows
+            output: "build/releases/example-v1.0.0-alpha.1+123-windows-arm64.tar.gz"
           - os: macos-latest
             platform: macos
             output: "build/releases/example-v1.0.0-alpha.1+123-macos-arm64.tar.gz"
@@ -39,7 +45,7 @@ jobs:
           sdk: ${{ inputs.dart_sdk }}
       - name: Create Example app
         run: dart create -t console example
-      - name: Build Linux app with dart-release-action
+      - name: Build executable with dart-release-action
         uses: ./
         with:
           token: ${{ github.token }}
