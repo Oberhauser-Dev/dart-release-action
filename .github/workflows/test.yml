@@ -61,6 +61,7 @@ jobs:
           include-paths: |-
             test
             README.md
+          verbose: true
           working-directory: ./example
       - name: Check file
         working-directory: ./example

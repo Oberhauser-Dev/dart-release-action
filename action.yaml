@@ -17,6 +17,10 @@ inputs:
     description: 'Whether the process should only run dry'
     required: false
     default: 'true'
+  verbose:
+    description: 'Whether the process should log processes.'
+    required: false
+    default: 'false'
   main-path:
     description: 'The Dart entry point with a `main` method'
     required: true
@@ -130,6 +134,7 @@ runs:
         ARTIFACT_PATH=$(dart pub global run dart_release build \
           --main-path ${{ inputs.main-path }} \
           --app-name ${{ inputs.app-name }} \
+          ${{ inputs.verbose != 'false' && '--verbose' || '' }} \
           ${{ inputs.app-version != '' && format('--app-version={0}', inputs.app-version) || '' }} \
           ${{ inputs.build-metadata != '' && format('--build-metadata={0}', inputs.build-metadata) || '' }} \
           ${{ inputs.build-pre-release != '' && format('--build-pre-release={0}', inputs.build-pre-release) || '' }} \
@@ -172,6 +177,7 @@ runs:
 
         dart pub global run dart_release deploy \
           ${{ inputs.dry-run != 'false' && '--dry-run' || '' }} \
+          ${{ inputs.verbose != 'false' && '--verbose' || '' }} \
           ${{ inputs.deploy-pre-run != '' && '--pre-script pre-run.sh' || '' }} \
           ${{ inputs.deploy-post-run != '' && '--post-script post-run.sh' || '' }} \
           --app-name ${{ inputs.app-name }} \
